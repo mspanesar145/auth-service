@@ -1,0 +1,75 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/auth_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:http://localhost:8081}
+    access-token-seconds: ${JWT_ACCESS_SECONDS:900}
+    private-key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDBBrDeJMztftag
+      zapuPCY+1xfhuSghdpXMLBBW8r8mhKyCoE0mi59RbLrRRyCxALYs807oEvM8tPKC
+      U2UX3iAh0ZfoqMFNK5u9vKDzBUZU9VEkdV/smsuidwwsXFRp8xKoyMnlv8jk2jey
+      CIhIFb34FbPnmzYG3Q3Ot5ePBSTBtKTEoDVX0kO1xMaLXw0n2E4NY1cftGDui7Pn
+      krOXd4CGITh2ti6msxevfplXWetAzD8SYRk0u/ahWFZcCyWbsAd5BfXISJZ097fG
+      FEXM/WpPGmdoT51bVVZYKTehfmZNzg/3kQSg2F4QMytLwtZmxT2r0dooH2VtXsw5
+      hOzSzbArAgMBAAECggEAVkDMJefh3rpP4/kjEDE2kdwBou7e/N0FoP+LqZ69RdQB
+      VjmVYAUCAxuH+15CQHXl8f4jI1bcdCMTPqNPSDQMva/vpppKDlbPOCCi9xVDUVFx
+      mc4NOCgPmKCDwwra+aERlHRsq4pglcrhGl/vre5xPftMsdDMepKqydWGFvWgcCGl
+      mXPA+0ngtP3UF4UuD4prZEzzlrp7gd+pxOYQvRxjmqh7CXLOwh+hkTsTFDoObGB3
+      1c2FNwXwiJ++HdQrl6l2EWoGfJFXsXnzNSaQsJXdG5GHiZXoNC8RjsINrgBSjZj/
+      2KkhItYDa2XTRHLv1bQyCWPW/1lAcTXghvYeHnfgIQKBgQD4n/W0qt3sU9iYnHvg
+      lHPvpydyz7BxeqRUvPGJdTomXj/kgghpBAnH84piULanluyoF3tKiFuf3TsHK5FS
+      CgYdlIGIq7z79wHDTS1Ewa5Tjz30b55mW1UrNzdZRB79MmCmNxnX8c272S3jBIGg
+      bZodGQ54dV3HEvfXrzlfVC0nEQKBgQDGwISursPlHwbOS9Faf4tUu8bpZO7/OnXz
+      nN4Cg9JmdrHEZE+1sy4DR9vgGtRwdfvXTIh452zMuKkVD5rL3nnzTvs5+evJLtNS
+      vdvTKqJfncWSOw4fi5gXouJtTuNBpd1PuNoLcICVNmObovY9XzW0+cI7q5p74XMV
+      DUrRVWs7ewKBgEEXb/aa/XsQAJcD8RK9CxVlR9ixM1qiZz+gMARy4oSFDGlA+f60
+      hfMJeeN/ijKaOt9PNoIu7P4Pp5Ka/3LhGPTJmpgzjkjRRG7jV8S2iHNr/yZtyqS1
+      qLilviHqyco0VEVwC54Tum9BzteuqFleGIkhtD4pTCIAf07Cm1yv5xphAoGAM+au
+      P1eP/FMf2dterj1ESzpF9UjQSIIhrx41s35tASjZvylaz14dE+o99sXK2BtXSp/H
+      u5rjhIpsTP2oNLjCK9FiNX+YHQ9HTAIcV4Z4pHN01nzpcT9o1jNI4baKDeicZGcn
+      OXmFenGbjVb+6oPkaIAYQrDLRLJY9RRlh0jBGeUCgYB0ImzXtn7s4bJX7SfHGpLR
+      z5AlbU6UP7fmDZFjuo1jaxUidCEZrj4TO+nBohOdFCaZ4MEYws+3lQmd1qGXQiHg
+      GP/D7bVgoluYyEtdIvgdeHil3FtZlqchuYHYrUh3OoQjxyApw0qVmfKlB50VsZrq
+      eW8eApapYC5LGfKBZi93Sw==
+      -----END PRIVATE KEY-----
+    public-key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwQaw3iTM7X7WoM2qbjwm
+      PtcX4bkoIXaVzCwQVvK/JoSsgqBNJoufUWy60UcgsQC2LPNO6BLzPLTyglNlF94g
+      IdGX6KjBTSubvbyg8wVGVPVRJHVf7JrLoncMLFxUafMSqMjJ5b/I5No3sgiISBW9
+      +BWz55s2Bt0NzreXjwUkwbSkxKA1V9JDtcTGi18NJ9hODWNXH7Rg7ouz55Kzl3eA
+      hiE4drYuprMXr36ZV1nrQMw/EmEZNLv2oVhWXAslm7AHeQX1yEiWdPe3xhRFzP1q
+      TxpnaE+dW1VWWCk3oX5mTc4P95EEoNheEDMrS8LWZsU9q9HaKB9lbV7MOYTs0s2w
+      KwIDAQAB
+      -----END PUBLIC KEY-----
+auth:
+  otp:
+    expiry-seconds: 300
+    max-attempts: 5
+    resend-cooldown-seconds: 60
+  refresh-token-days: 30
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+sms:
+  gateway-url: ${SMS_GATEWAY_URL:}
+  api-key: ${SMS_API_KEY:}
+testMode: true
