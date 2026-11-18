@@ -1,0 +1,7 @@
+spring:
+  config:
+    import: aws-secretsmanager:cenes/staging/auth/config
+  cloud:
+    aws:
+      region:
+        static: us-west-1

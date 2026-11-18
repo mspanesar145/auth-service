@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: auth_db
-      POSTGRES_USER: auth_user
-      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: cenes_auth
+      POSTGRES_USER: cenes_auth_user
+      POSTGRES_PASSWORD: u;=q^}Ao5$=!
     ports: ["5433:5432"]
     volumes: ["auth-postgres:/var/lib/postgresql/data"]
   kafka:
