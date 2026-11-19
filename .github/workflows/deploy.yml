@@ -1,0 +1,39 @@
+name: Deploy Cenes Auth Service
+
+# Step 1: Manual deployment trigger
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Select deployment environment"
+        required: true
+        type: choice
+        options:
+          - Stage
+          - "Prod West"
+
+# Step 2: GitHub Actions permissions
+permissions:
+  id-token: write
+  contents: read
+
+# Step 3: Deployment job
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build Spring Boot application
+        run: mvn -B clean verify
