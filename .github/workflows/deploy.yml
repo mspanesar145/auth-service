@@ -1,31 +1,29 @@
-name: Deploy Cenes Auth Service
 
-# Step 1: Manual deployment trigger
+name: Deploy Auth Service
+
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Select deployment environment"
-        required: true
-        type: choice
-        options:
-          - Stage
-          - "Prod West"
 
-# Step 2: GitHub Actions permissions
 permissions:
-  id-token: write
   contents: read
+  id-token: write
 
-# Step 3: Deployment job
 jobs:
-  deploy:
-    name: Deploy to ${{ inputs.environment }}
+  deploy-stage:
+    name: Deploy to Staging
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: stage
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      ECS_CLUSTER: cenes-staging-cluster
+      ECS_SERVICE: cenes-staging-auth-service
+      ECS_TASK_FAMILY: cenes-staging-auth-task
+      CONTAINER_NAME: auth-service
 
     steps:
-      - name: Checkout source code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Java 21
@@ -35,5 +33,59 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Build Spring Boot application
-        run: mvn -B clean verify
+      - name: Build with Maven
+        run: mvn -B clean package -DskipTests
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build --platform linux/amd64 -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Download current ECS task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_FAMILY" \
+            --query taskDefinition \
+            > task-definition-full.json
+
+          jq 'del(
+            .taskDefinitionArn,
+            .revision,
+            .status,
+            .requiresAttributes,
+            .compatibilities,
+            .registeredAt,
+            .registeredBy
+          )' task-definition-full.json > task-definition.json
+
+      - name: Render new ECS task definition
+        id: render-task
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: auth-service
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-task.outputs.task-definition }}
+          service: cenes-staging-auth-service
+          cluster: cenes-staging-cluster
+          wait-for-service-stability: true
