@@ -3,6 +3,8 @@ package com.eventapp.auth.service;
 import com.eventapp.auth.dto.AuthDtos.*;
 import com.eventapp.auth.entity.*;
 import com.eventapp.auth.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,8 @@ import java.util.*;
 
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private final AuthUserRepository users;
     private final OtpChallengeRepository otps;
     private final RefreshSessionRepository sessions;
@@ -54,7 +58,6 @@ public class AuthService {
         });
 
         String otp = isTestMode ? "123456" : String.format("%06d", random.nextInt(1_000_000));
-        System.out.println("Test Mode : "+ isTestMode+ " and otp :"+ otp);
         otps.save(new OtpChallenge(phone, hash(otp), now.plusSeconds(otpExpiry)));
         if (!isTestMode) {
             delivery.send(phone, otp);
