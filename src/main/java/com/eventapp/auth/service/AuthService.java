@@ -46,9 +46,6 @@ public class AuthService {
 
     @Transactional
     public void requestOtp(String phone) {
-        if (isTestMode) {
-         return;
-        }
         Instant now = Instant.now();
         otps.findTopByPhoneNumberAndConsumedFalseOrderByCreatedAtDesc(phone).ifPresent(old -> {
             if (old.getCreatedAt().plusSeconds(cooldown).isAfter(now))
@@ -57,12 +54,13 @@ public class AuthService {
         });
         String otp = String.format("%06d", random.nextInt(1_000_000));
         otps.save(new OtpChallenge(phone, hash(otp), now.plusSeconds(otpExpiry)));
-        delivery.send(phone, otp);
+        if (!isTestMode) {
+            delivery.send(phone, otp);
+        }
     }
 
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public TokenResponse verifyOtp(VerifyOtp req) {
-     if (!isTestMode) {
        OtpChallenge challenge = otps.findTopByPhoneNumberAndConsumedFalseOrderByCreatedAtDesc(req.phoneNumber()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP not found or already used"));
        if (challenge.getExpiresAt().isBefore(Instant.now())) {
         challenge.consume();
@@ -77,14 +75,14 @@ public class AuthService {
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid OTP");
        }
        challenge.consume();
-     }
 
-     AuthUser user = users.findByPhoneNumber(req.phoneNumber()).orElseGet(() -> users.save(new AuthUser(req.phoneNumber())));
-     if (user.getStatus() == AuthUser.Status.DISABLED || user.getStatus() == AuthUser.Status.DELETION_PENDING || user.getStatus() == AuthUser.Status.DELETED)
-         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is not active");
-     user.setPhoneVerified(true);
-     user.setStatus(AuthUser.Status.ACTIVE);
-     return issue(user, req.deviceName());
+
+       AuthUser user = users.findByPhoneNumber(req.phoneNumber()).orElseGet(() -> users.save(new AuthUser(req.phoneNumber())));
+       if (user.getStatus() == AuthUser.Status.DISABLED || user.getStatus() == AuthUser.Status.DELETION_PENDING || user.getStatus() == AuthUser.Status.DELETED)
+           throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is not active");
+       user.setPhoneVerified(true);
+       user.setStatus(AuthUser.Status.ACTIVE);
+       return issue(user, req.deviceName());
     }
 
     @Transactional
