@@ -52,7 +52,9 @@ public class AuthService {
                 throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Please wait before requesting another OTP");
             old.consume();
         });
-        String otp = String.format("%06d", random.nextInt(1_000_000));
+
+        String otp = isTestMode ? "123456" : String.format("%06d", random.nextInt(1_000_000));
+        System.out.println("Test Mode : "+ isTestMode+ " and otp :"+ otp);
         otps.save(new OtpChallenge(phone, hash(otp), now.plusSeconds(otpExpiry)));
         if (!isTestMode) {
             delivery.send(phone, otp);
@@ -75,7 +77,6 @@ public class AuthService {
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid OTP");
        }
        challenge.consume();
-
 
        AuthUser user = users.findByPhoneNumber(req.phoneNumber()).orElseGet(() -> users.save(new AuthUser(req.phoneNumber())));
        if (user.getStatus() == AuthUser.Status.DISABLED || user.getStatus() == AuthUser.Status.DELETION_PENDING || user.getStatus() == AuthUser.Status.DELETED)
