@@ -25,6 +25,4 @@ public interface OutboxEventRepository
     List<OutboxEvent> findPendingEvents(
             @Param("batchSize") int batchSize
     );
-
-    long countByStatus(OutboxEvent.Status status);
 }

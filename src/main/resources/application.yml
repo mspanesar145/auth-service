@@ -26,12 +26,16 @@ spring:
 
     listener:
       ack-mode: record
-      auto-startup: false
+      auto-startup: true
 
 app:
   kafka:
     topics:
       user-registered: cenes.auth.user-registered.v1
+  outbox:
+    publisher:
+      enabled: ${OUTBOX_PUBLISHER_ENABLED:false}
+      delay-ms: 1000
 security:
   jwt:
     issuer: ${JWT_ISSUER:http://localhost:8081}

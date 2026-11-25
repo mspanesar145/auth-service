@@ -68,34 +68,81 @@ public class AuthService {
 
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public TokenResponse verifyOtp(VerifyOtp req) {
-       OtpChallenge challenge = otps.findTopByPhoneNumberAndConsumedFalseOrderByCreatedAtDesc(req.phoneNumber()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP not found or already used"));
-       if (challenge.getExpiresAt().isBefore(Instant.now())) {
-        challenge.consume();
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP expired");
-       }
-       if (challenge.getAttempts() >= maxAttempts) {
-        challenge.consume();
-        throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Maximum OTP attempts exceeded");
-       }
-       if (!MessageDigest.isEqual(challenge.getCodeHash().getBytes(StandardCharsets.UTF_8), hash(req.otp()).getBytes(StandardCharsets.UTF_8))) {
-        challenge.incrementAttempts();
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid OTP");
-       }
-       challenge.consume();
 
+        OtpChallenge challenge = otps
+                .findTopByPhoneNumberAndConsumedFalseOrderByCreatedAtDesc(
+                        req.phoneNumber()
+                )
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "OTP not found or already used"
+                ));
+
+        if (challenge.getExpiresAt().isBefore(Instant.now())) {
+            challenge.consume();
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "OTP expired"
+            );
+        }
+
+        if (challenge.getAttempts() >= maxAttempts) {
+            challenge.consume();
+
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "Maximum OTP attempts exceeded"
+            );
+        }
+
+        if (!MessageDigest.isEqual(
+                challenge.getCodeHash().getBytes(StandardCharsets.UTF_8),
+                hash(req.otp()).getBytes(StandardCharsets.UTF_8))) {
+
+            challenge.incrementAttempts();
+
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid OTP"
+            );
+        }
+
+        challenge.consume();
+
+        // Find existing user or create a new unverified user
         AuthUser user = users
                 .findByPhoneNumber(req.phoneNumber())
-                .orElseGet(() -> {
-                    AuthUser savedUser = users.save(new AuthUser(req.phoneNumber()));
-                    outboxService.saveUserRegisteredEvent(savedUser);
-                    return savedUser;
-                });
+                .orElseGet(() ->
+                        new AuthUser(req.phoneNumber())
+                );
 
-       if (user.getStatus() == AuthUser.Status.DISABLED || user.getStatus() == AuthUser.Status.DELETION_PENDING || user.getStatus() == AuthUser.Status.DELETED)
-           throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is not active");
-       user.setPhoneVerified(true);
-       user.setStatus(AuthUser.Status.ACTIVE);
-       return issue(user, req.deviceName());
+        // Validate account status
+        if (user.getStatus() == AuthUser.Status.DISABLED
+                || user.getStatus() == AuthUser.Status.DELETION_PENDING
+                || user.getStatus() == AuthUser.Status.DELETED) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Account is not active"
+            );
+        }
+
+        // Check whether this is the first successful verification
+        boolean firstVerification = !user.isPhoneVerified();
+
+        user.setPhoneVerified(true);
+        user.setStatus(AuthUser.Status.ACTIVE);
+
+        // Persist verified user
+        AuthUser savedUser = users.save(user);
+
+        // Generate registration event only once in sequential requests
+        if (firstVerification) {
+            outboxService.saveUserRegisteredEvent(savedUser);
+        }
+
+        return issue(savedUser, req.deviceName());
     }
 
     @Transactional
