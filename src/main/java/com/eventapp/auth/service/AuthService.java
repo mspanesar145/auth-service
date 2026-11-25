@@ -26,6 +26,7 @@ public class AuthService {
     private final RefreshSessionRepository sessions;
     private final OtpDeliveryService delivery;
     private final TokenService tokens;
+    private final OutboxService outboxService;
     private final SecureRandom random = new SecureRandom();
 
     @Value("${auth.otp.expiry-seconds:300}")
@@ -40,12 +41,13 @@ public class AuthService {
     boolean isTestMode;
 
 
- public AuthService(AuthUserRepository u, OtpChallengeRepository o, RefreshSessionRepository s, OtpDeliveryService d, TokenService t) {
+ public AuthService(AuthUserRepository u, OtpChallengeRepository o, RefreshSessionRepository s, OtpDeliveryService d, TokenService t, OutboxService ob) {
         users = u;
         otps = o;
         sessions = s;
         delivery = d;
         tokens = t;
+        outboxService = ob;
     }
 
     @Transactional
@@ -81,7 +83,14 @@ public class AuthService {
        }
        challenge.consume();
 
-       AuthUser user = users.findByPhoneNumber(req.phoneNumber()).orElseGet(() -> users.save(new AuthUser(req.phoneNumber())));
+        AuthUser user = users
+                .findByPhoneNumber(req.phoneNumber())
+                .orElseGet(() -> {
+                    AuthUser savedUser = users.save(new AuthUser(req.phoneNumber()));
+                    outboxService.saveUserRegisteredEvent(savedUser);
+                    return savedUser;
+                });
+
        if (user.getStatus() == AuthUser.Status.DISABLED || user.getStatus() == AuthUser.Status.DELETION_PENDING || user.getStatus() == AuthUser.Status.DELETED)
            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is not active");
        user.setPhoneVerified(true);
